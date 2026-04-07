@@ -1,4 +1,3 @@
-use near_workspaces::types::NearToken;
 use serde_json::json;
 
 /// Build the contract before running:
@@ -6,13 +5,18 @@ use serde_json::json;
 /// Then run from integration-tests/:
 ///   cargo test
 
+// near-sdk-go double-encodes all return values (ReturnValue calls json.Marshal on an
+// already-JSON string). Every view result arrives as a JSON string that wraps the real
+// value, so we always deserialize in two steps:
+//   1.  .json::<String>()         → unwrap the outer encoding
+//   2.  serde_json::from_str(…)   → parse the actual type
+
 #[tokio::test]
 async fn test_greeting_init() -> anyhow::Result<()> {
     let sandbox = near_workspaces::sandbox().await?;
     let wasm = std::fs::read("../main.wasm")?;
     let contract = sandbox.dev_deploy(&wasm).await?;
 
-    // Initialize the contract
     contract
         .call("init")
         .args_json(json!({}))
@@ -20,13 +24,8 @@ async fn test_greeting_init() -> anyhow::Result<()> {
         .await?
         .into_result()?;
 
-    // Default greeting should be "Hello"
-    let greeting: String = contract
-        .view("get_greeting")
-        .args_json(json!({}))
-        .await?
-        .json()?;
-
+    let raw: String = contract.view("get_greeting").args_json(json!({})).await?.json()?;
+    let greeting: String = serde_json::from_str(&raw)?;
     assert_eq!(greeting, "Hello");
     Ok(())
 }
@@ -37,17 +36,9 @@ async fn test_set_greeting() -> anyhow::Result<()> {
     let wasm = std::fs::read("../main.wasm")?;
     let contract = sandbox.dev_deploy(&wasm).await?;
 
-    contract
-        .call("init")
-        .args_json(json!({}))
-        .transact()
-        .await?
-        .into_result()?;
+    contract.call("init").args_json(json!({})).transact().await?.into_result()?;
 
-    // Create a caller account
     let caller = sandbox.dev_create_account().await?;
-
-    // Set a new greeting
     caller
         .call(contract.id(), "set_greeting")
         .args_json(json!({ "greeting": "Howdy" }))
@@ -55,12 +46,8 @@ async fn test_set_greeting() -> anyhow::Result<()> {
         .await?
         .into_result()?;
 
-    let greeting: String = contract
-        .view("get_greeting")
-        .args_json(json!({}))
-        .await?
-        .json()?;
-
+    let raw: String = contract.view("get_greeting").args_json(json!({})).await?.json()?;
+    let greeting: String = serde_json::from_str(&raw)?;
     assert_eq!(greeting, "Howdy");
     Ok(())
 }
@@ -71,15 +58,9 @@ async fn test_greeting_update_multiple_times() -> anyhow::Result<()> {
     let wasm = std::fs::read("../main.wasm")?;
     let contract = sandbox.dev_deploy(&wasm).await?;
 
-    contract
-        .call("init")
-        .args_json(json!({}))
-        .transact()
-        .await?
-        .into_result()?;
+    contract.call("init").args_json(json!({})).transact().await?.into_result()?;
 
     let caller = sandbox.dev_create_account().await?;
-
     for msg in &["Hi", "Hello", "Привет"] {
         caller
             .call(contract.id(), "set_greeting")
@@ -89,12 +70,8 @@ async fn test_greeting_update_multiple_times() -> anyhow::Result<()> {
             .into_result()?;
     }
 
-    let greeting: String = contract
-        .view("get_greeting")
-        .args_json(json!({}))
-        .await?
-        .json()?;
-
+    let raw: String = contract.view("get_greeting").args_json(json!({})).await?.json()?;
+    let greeting: String = serde_json::from_str(&raw)?;
     assert_eq!(greeting, "Привет");
     Ok(())
 }

@@ -4,6 +4,8 @@
 package main
 
 import (
+	encodingJson "encoding/json"
+
 	"github.com/vlmoon99/near-sdk-go/collections"
 	"github.com/vlmoon99/near-sdk-go/env"
 	"github.com/vlmoon99/near-sdk-go/types"
@@ -44,20 +46,28 @@ type OldGuestBook struct {
 	Payments *collections.Vector[string]     `json:"payments"`
 }
 
-// @contract:init
 // Migrate reads the old state, merges payments into messages, and writes the new state.
-// The @contract:init directive ensures this runs as an initialization method,
-// replacing the current state with the migrated version.
+// Called explicitly after deploying V2 over V1 — not an init, but a regular mutating call.
+//
+// @contract:mutating
 func (c *GuestBookV2) Migrate() {
-	// Load old state manually — same storage keys as before
-	old := &OldGuestBook{
-		Messages: collections.NewVector[OldMessage]("m"),
-		Payments: collections.NewVector[string]("p"),
+	// Read the raw state bytes so we can decode as OldGuestBook and recover vector lengths.
+	// (NewVector("m") starts with Len=0; we need the persisted length from the v1 state.)
+	rawState, err := env.StateRead()
+	if err != nil || len(rawState) == 0 {
+		env.PanicStr("No state to migrate")
 	}
 
-	c.Messages = collections.NewVector[PostedMessage]("m")
+	var old OldGuestBook
+	if jsonErr := encodingJson.Unmarshal(rawState, &old); jsonErr != nil {
+		env.PanicStr("Failed to deserialize old state")
+	}
 
 	count := old.Messages.Length()
+
+	// Reset with the same prefix — Push() will overwrite element keys in-place.
+	c.Messages = collections.NewVector[PostedMessage]("m")
+
 	for i := uint64(0); i < count; i++ {
 		oldMsg, _ := old.Messages.Get(i)
 		payment, _ := old.Payments.Get(i)
@@ -70,7 +80,7 @@ func (c *GuestBookV2) Migrate() {
 		})
 	}
 
-	// Clear old payments vector to free orphaned storage keys
+	// Clear old payments storage entries.
 	old.Payments.Clear()
 
 	env.LogString("Migration completed successfully")

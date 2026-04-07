@@ -42,7 +42,7 @@ func TestSelfUpdate_OwnerCanUpdate(t *testing.T) {
 			t.Errorf("UpdateContract panicked for owner: %v", r)
 		}
 	}()
-	c.UpdateContract([]byte{0x00, 0x61, 0x73, 0x6d}) // minimal wasm magic bytes
+	c.UpdateContract(UpdateContractInput{WasmBytes: "AGFzbQ=="}) // base64 of minimal wasm magic bytes
 }
 
 func TestSelfUpdate_NonOwnerCannotUpdate(t *testing.T) {

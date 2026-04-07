@@ -1,0 +1,11 @@
+# Compiled WASM binaries
+*.wasm
+
+# Rust build artifacts
+**/target/
+
+# Cargo.lock for integration-tests (binaries: lock, libraries: no lock)
+**/integration-tests/Cargo.lock
+
+# Generated Go build file (created/deleted during near-go build)
+**/generated_build.go
