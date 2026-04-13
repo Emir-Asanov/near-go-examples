@@ -11,7 +11,7 @@ import (
 // Bid represents a single bid placed in an auction.
 type Bid struct {
 	Bidder string `json:"bidder"`
-	Bid    string `json:"bid"`
+	Bid    string `json:"amount"`
 }
 
 type InitInput struct {
@@ -42,8 +42,8 @@ func (c *AuctionContract) Init(input InitInput) {
 // @contract:payable min_deposit=1yoctoNEAR
 // @contract:mutating
 func (c *AuctionContract) Bid() error {
-	blockTime := env.GetBlockTimeMs()
-	if blockTime >= c.AuctionEndTime {
+	blockTimeNs := env.GetBlockTimeMs() * 1_000_000
+	if blockTimeNs >= c.AuctionEndTime {
 		return errors.New("auction has ended")
 	}
 
@@ -79,8 +79,8 @@ func (c *AuctionContract) Bid() error {
 
 // @contract:mutating
 func (c *AuctionContract) Claim() error {
-	blockTime := env.GetBlockTimeMs()
-	if blockTime <= c.AuctionEndTime {
+	blockTimeNs := env.GetBlockTimeMs() * 1_000_000
+	if blockTimeNs <= c.AuctionEndTime {
 		return errors.New("auction has not ended yet")
 	}
 

@@ -206,6 +206,30 @@ func (c *CollectionsContract) GetPage(fromIndex uint64, limit uint64) []string {
 	return result
 }
 
+// ── Error-Prone Patterns ──────────────────────────────────────────────────────
+
+// Bug 1: Never replace a collection without clearing it first.
+// Reassigning the field resets metadata (like length), but all old keys
+// remain in storage under the same prefix — causing stale data reads.
+// @contract:mutating
+func (c *CollectionsContract) BugReplaceWithoutClearing() {
+	c.MyLookupMap.Insert("key", "original")
+	// ❌ Wrong: old "key" stays in storage; only the metadata resets
+	c.MyLookupMap = collections.NewLookupMap[string, string]("m")
+}
+
+// Bug 2: Never share a prefix between two collections.
+// Both collections read/write the same storage keys, so inserts in one
+// appear in the other — producing silent data corruption.
+// @contract:mutating
+func (c *CollectionsContract) BugSharedPrefix() {
+	mapA := collections.NewLookupMap[string, string]("m")
+	mapB := collections.NewLookupMap[string, string]("m") // ❌ Same prefix!
+	mapA.Insert("key", "value-a")
+	val, _ := mapB.Get("key") // silently returns "value-a"
+	_ = val
+}
+
 // ── Nested Collections ────────────────────────────────────────────────────────
 
 // @contract:mutating

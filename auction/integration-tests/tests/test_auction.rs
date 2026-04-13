@@ -8,12 +8,12 @@ use serde_json::{json, Value};
 
 // near-sdk-go double-encodes all return values; use two-step deserialization on every view.
 
-fn five_minutes_from_now_ms() -> u64 {
+fn five_minutes_from_now_ns() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .as_millis() as u64
-        + 5 * 60 * 1000
+        .as_nanos() as u64
+        + 5 * 60 * 1_000_000_000
 }
 
 async fn view_str(contract: &near_workspaces::Contract, method: &str) -> anyhow::Result<String> {
@@ -40,7 +40,7 @@ async fn test_auction_init() -> anyhow::Result<()> {
 
     contract
         .call("init")
-        .args_json(json!({ "end_time": five_minutes_from_now_ms(), "auctioneer": auctioneer.id().to_string() }))
+        .args_json(json!({ "end_time": five_minutes_from_now_ns(), "auctioneer": auctioneer.id().to_string() }))
         .transact().await?.into_result()?;
 
     assert_eq!(view_str(&contract, "get_auctioneer").await?, auctioneer.id().to_string());
@@ -57,7 +57,7 @@ async fn test_auction_bid() -> anyhow::Result<()> {
 
     contract
         .call("init")
-        .args_json(json!({ "end_time": five_minutes_from_now_ms(), "auctioneer": auctioneer.id().to_string() }))
+        .args_json(json!({ "end_time": five_minutes_from_now_ns(), "auctioneer": auctioneer.id().to_string() }))
         .transact().await?.into_result()?;
 
     let bidder = sandbox.dev_create_account().await?;
@@ -81,7 +81,7 @@ async fn test_auction_bid_must_be_higher() -> anyhow::Result<()> {
 
     contract
         .call("init")
-        .args_json(json!({ "end_time": five_minutes_from_now_ms(), "auctioneer": auctioneer.id().to_string() }))
+        .args_json(json!({ "end_time": five_minutes_from_now_ns(), "auctioneer": auctioneer.id().to_string() }))
         .transact().await?.into_result()?;
 
     let alice = sandbox.dev_create_account().await?;
@@ -102,7 +102,7 @@ async fn test_auction_cannot_claim_before_end() -> anyhow::Result<()> {
 
     contract
         .call("init")
-        .args_json(json!({ "end_time": five_minutes_from_now_ms(), "auctioneer": auctioneer.id().to_string() }))
+        .args_json(json!({ "end_time": five_minutes_from_now_ns(), "auctioneer": auctioneer.id().to_string() }))
         .transact().await?.into_result()?;
 
     let result = contract.call("claim").args_json(json!({})).transact().await?;

@@ -19,6 +19,9 @@ func blockMs(ms uint64) uint64 { return ms * 1_000_000 }
 // auctionEndMs is the end time used across tests (milliseconds).
 const auctionEndMs = uint64(9_000_000)
 
+// auctionEndNs is auctionEndMs converted to nanoseconds — what the contract stores as AuctionEndTime.
+const auctionEndNs = auctionEndMs * 1_000_000
+
 func setupTest(t *testing.T) *AuctionContract {
 	t.Helper()
 	ms := env.NearBlockchainImports.(*system.MockSystem)
@@ -28,7 +31,7 @@ func setupTest(t *testing.T) *AuctionContract {
 
 	c := &AuctionContract{}
 	c.Init(InitInput{
-		EndTime:    auctionEndMs,
+		EndTime:    auctionEndNs,
 		Auctioneer: "auctioneer.testnet",
 	})
 	return c
@@ -46,8 +49,8 @@ func TestAuction_Init(t *testing.T) {
 	if c.GetAuctioneer() != "auctioneer.testnet" {
 		t.Errorf("Expected auctioneer.testnet, got %s", c.GetAuctioneer())
 	}
-	if c.GetAuctionEndTime() != auctionEndMs {
-		t.Errorf("Expected end time %d, got %d", auctionEndMs, c.GetAuctionEndTime())
+	if c.GetAuctionEndTime() != auctionEndNs {
+		t.Errorf("Expected end time %d, got %d", auctionEndNs, c.GetAuctionEndTime())
 	}
 	if c.GetClaimed() {
 		t.Error("Auction should not be claimed at start")
