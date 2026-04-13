@@ -119,3 +119,9 @@ func (c *AuctionContract) GetAuctioneer() string {
 func (c *AuctionContract) GetClaimed() bool {
 	return c.Claimed
 }
+
+// isAuctionEnded is an internal helper — no @contract: directive, not exposed to the outside.
+// It checks whether the auction end time has passed based on the current block time.
+func (c *AuctionContract) isAuctionEnded() bool {
+	return env.GetBlockTimeMs()*1_000_000 >= c.AuctionEndTime
+}
