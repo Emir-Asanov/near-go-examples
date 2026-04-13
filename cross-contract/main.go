@@ -181,3 +181,22 @@ func (c *CrossContractExample) OnParallelContractsCallback(input CallbackInput, 
 
 	env.LogString("Processed " + types.IntToString(len(results)) + " contract responses")
 }
+
+// ── Pattern: Cross-Contract Call with .Then ───────────────────────────────────
+
+// @contract:mutating
+func (c *CrossContractExample) CrossContractCallPattern() {
+	promise.NewCrossContract("external_address").
+		Call("function_name", map[string]string{"key": "value"}).
+		Then("cross_contract_callback_pattern", map[string]string{})
+}
+
+// @contract:view
+// @contract:promise_callback
+func (c *CrossContractExample) CrossContractCallbackPattern(result promise.PromiseResult) {
+	if result.Success {
+		env.LogString("External call succeeded: " + string(result.Data))
+	} else {
+		env.LogString("External call failed — rolling back if needed")
+	}
+}
